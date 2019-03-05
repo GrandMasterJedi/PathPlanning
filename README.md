@@ -94,8 +94,8 @@ The highway's waypoints loop around so the frenet s value, distance along the ro
 
 ## Reflection
 
-The particular path planned I implemented for the vehicle is based on heuristic rules. The model assess the position of my car with respect to all other cars and command my vehicle to accellerate, lower the speed and/or change lane. It uses Frenet coordinates (s,d) to assess distance and lane for all vehicles. Those coordinates that are converted to my car local point of view (Cartesian) for trajectory generation. The Frenet coordinates are as shown in the image below. 
-The two main components of the algorithm are behavioral planning and path generation. 
+The particular path planned I implemented for the vehicle is based on heuristic rules. The model assess the position of my car with respect to all other cars and command my vehicle to accellerate, lower the speed and/or change lane. It uses Frenet coordinates (s,d) to assess distance and lane for all vehicles. Those coordinates that are converted to my car local point of view (Cartesian) for trajectory generation. The Frenet coordinates are as shown in the image below. The two main components of the algorithm are behavioral planning and path generation.
+
 ![alt text][image2]
 
 ### Behavior Planning 
@@ -114,7 +114,7 @@ This part relates to the calculation of the trajectory based on the speed and la
 
 ## Resource
 
-* Spline library is available [here] (http://kluge.in-chemnitz.de/opensource/spline/)
+* Spline library is available [here](http://kluge.in-chemnitz.de/opensource/spline/)
 
 ---
 
