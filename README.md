@@ -1,6 +1,9 @@
+[image1]: ./image/changeLane_5miles.PNG "im1"
+[image2]: ./image/frenetCoord.png "im2"
+
 # Demo for Self Driving Path Planning
 
-A vehicle navigates around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit with the following conditions:
+A vehicle navigates around a virtual highway with traffic created by other vehicles. It tries to drive at the 50 MPH speed limit with the following conditions:
 * It drives as close as possible to the 50 MPH speed limit, which means passing slower traffic when possible. 
 * It avoids hitting other cars at all cost
 * It drives inside of the marked road lanes at all times, unless going from one lane to another. 
@@ -8,6 +11,7 @@ A vehicle navigates around a virtual highway with other traffic that is driving 
 * Its total acceleration is lower than 10 m/s^2 
 * Its jerk is lower than 10 m/s^3.
 
+![alt text][image1]
 
 This project is my solution to Term 3, assignment 1 of the Udacity Self-Driving Car Engineer Nanodegree Program. 
 
@@ -32,6 +36,8 @@ This project is my solution to Term 3, assignment 1 of the Udacity Self-Driving 
     cd uWebSockets
     git checkout e94b6e1
     ```
+* [spline](http://kluge.in-chemnitz.de/opensource/spline) library
+    
 
 ### Simulator
 You can download the Term3 Simulator which contains the Path Planning Project from [here](https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).  
@@ -85,32 +91,30 @@ The highway's waypoints loop around so the frenet s value, distance along the ro
 
 ---
 
+
 ## Reflection
 
-### Model
+The particular path planned I implemented for the vehicle is based on heuristic rules. The model assess the position of my car with respect to all other cars and command my vehicle to accellerate, lower the speed and/or change lane. It uses Frenet coordinates (s,d) to assess distance and lane for all vehicles. Those coordinates that are converted to my car local point of view (Cartesian) for trajectory generation. The Frenet coordinates are as shown in the image below. 
+The two main components of the algorithm are behavioral planning and path generation. 
+![alt text][image2]
+
+### Behavior Planning 
+It assess the position of other vehicles with respect of my vehicle and based on this, the behavioral planned choose to increase/decrease the speed (with controlled jerk/braking rate) and make a lane change. The planner avoid collisions by satisfying the following hard constraints:
+1. Accelerate only if no vehicles is within 30 meters
+2. Change lane if a vehicle is driving slower in front and no vehicles on the two sides within +- 30 meters of s
+3. Deccelerate if the first two conditions are not satisfied
 
 
-###
+### Path Generation 
+This part relates to the calculation of the trajectory based on the speed and lane of my vehicle and also the past path points. It uses the spline.h library to interpolate through the last two points of my path at time t and future points at respectively 30m, 60m and 90m distance. The spline takes local car coordinates (after shift and rotation of Frenet coordinates). Also, the spline is continuous at each time stamp with the the pass trajectory points copied to the new trajectory. 
 
 
----
-
-## Details
-
-1. The car uses a perfect controller and will visit every (x,y) point it recieves in the list every .02 seconds. The units for the (x,y) points are in meters and the spacing of the points determines the speed of the car. The vector going from a point to the next point in the list dictates the angle of the car. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration. The (x,y) point paths that the planner recieves should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3. (NOTE: As this is BETA, these requirements might change. Also currently jerk is over a .02 second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
-
-2. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition. previous_path_x, and previous_path_y can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
 
 --- 
 
 ## Resource
 
-A really helpful resource for doing this project and creating smooth trajectories was using http://kluge.in-chemnitz.de/opensource/spline/, the spline function is in a single hearder file is really easy to use.
+* Spline library is available [here] (http://kluge.in-chemnitz.de/opensource/spline/)
 
 ---
 
-
-
-
-Below image
-![SolutionExplorAll](/image/SolutionExplorer_InterfaceAll.PNG)
