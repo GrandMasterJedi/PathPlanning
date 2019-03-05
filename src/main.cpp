@@ -201,7 +201,12 @@ int main() {
   	map_waypoints_dy.push_back(d_y);
   }
 
-  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  int lane = 1; // start in lane 1 as in the video (middle lane)
+
+	// reference value for velocity
+  double ref_vel = 0.0; 
+
+  h.onMessage([&ref_vel, &lane, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -209,11 +214,9 @@ int main() {
     //auto sdata = string(data).substr(0, length);
     //cout << sdata << endl;
 
-
-    int lane = 1; // start in lane 1 as in the video
-
-    // reference value for velocity
-    double ref_vel = 0.0; 
+  
+    const double MAX_SPEED = 49.9;
+    const double MAX_ACC = .224; //5m per second
 
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
 
@@ -257,14 +260,15 @@ int main() {
             bool car_left = false;
             bool car_right = false;
             for ( int i = 0; i < sensor_fusion.size(); i++ ) {
+            	// loop all cars around
                 float d = sensor_fusion[i][6];
                 int car_lane = -1;
-                // is it on the same lane we are
-                if ( d > 0 && d < 4 ) {
+                // is it on the same lane if d < (2+4*lane+2) && d > (2+4*lane-2)
+                if ( d >= 0 && d < 4 ) {
                   car_lane = 0;
-                } else if ( d > 4 && d < 8 ) {
+                } else if ( d >= 4 && d < 8 ) {
                   car_lane = 1;
-                } else if ( d > 8 && d < 12 ) {
+                } else if ( d >= 8 && d <= 12 ) {
                   car_lane = 2;
                 }
                 if (car_lane < 0) {
@@ -279,21 +283,16 @@ int main() {
                 check_car_s += ((double)prev_size*0.02*check_speed);
 
                 if ( car_lane == lane ) {
-                  // Car in our lane.
-                  car_ahead |= check_car_s > car_s && check_car_s - car_s < 30;
+                  // bool for car ahead within 30m distance
+                  car_ahead |= ((check_car_s > car_s) && ((check_car_s - car_s) < 30));
                 } else if ( car_lane - lane == -1 ) {
-                  // Car left
-                  car_left |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
+                  car_left |= ((car_s - 30) < check_car_s) && ((car_s + 30) > check_car_s);
                 } else if ( car_lane - lane == 1 ) {
-                  // Car right
-                  car_right |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
+                  car_right |= ((car_s - 30) < check_car_s) && ((car_s + 30) > check_car_s);
                 }
             }
 
-            // Behavior : Let's see what to do.
-            double speed_diff = 0;
-            const double MAX_SPEED = 49.5;
-            const double MAX_ACC = .224;
+            
 
             if ( car_ahead ) { // Car ahead
               if ( !car_left && lane > 0 ) {
@@ -303,7 +302,7 @@ int main() {
                 // if there is no car right and there is a right lane.
                 lane++; // Change lane right.
               } else {
-                speed_diff -= MAX_ACC;
+                ref_vel -= MAX_ACC; // reduce speed
               }
             } else {
               if ( lane != 1 ) { // if we are not on the center lane.
@@ -311,8 +310,8 @@ int main() {
                   lane = 1; // Back to center.
                 }
               }
-              if ( ref_vel < MAX_SPEED ) {
-                speed_diff += MAX_ACC;
+              if ( ref_vel < (MAX_SPEED-MAX_ACC) ) {
+                ref_vel += MAX_ACC; // accelerate
               }
             }
 
@@ -337,9 +336,7 @@ int main() {
             //       // car distance is less than 30 m and same lane
             //       // could change lane or change speed 
             //       ref_vel = 29.5; //mph
-            //       // too_close = true;
-
-                  
+            //       // too_close = true;               
             //     }
             //   }
             // }
@@ -351,11 +348,6 @@ int main() {
             // else if (ref_vel < 49.5) {
             //   ref_vel += .224;
             // }
-
-            
-
-
-
 
             // as in lecture video create a vector of points for later interpolate with the spline.h function to find the path
             vector<double> ptsx;
@@ -431,7 +423,7 @@ int main() {
           	vector<double> next_y_vals;
 
 
-          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+          	// define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           	
             // // following is for the car to move forward
             
@@ -460,14 +452,8 @@ int main() {
             double target_dist = sqrt(target_x*target_x + target_y*target_y);
 
             double x_add_on = 0;
-            // Fill the rest of path planner with previous points not consumed and
+            
             for (int i = 1; i<= (50 - previous_path_x.size()); i++) {
-              ref_vel += speed_diff;
-              if ( ref_vel > MAX_SPEED ) {
-                ref_vel = MAX_SPEED;
-              } else if ( ref_vel < MAX_ACC ) {
-                ref_vel = MAX_ACC;
-              }
               
               double N = target_dist/(.02*ref_vel/2.24);
               double x_point = x_add_on + target_x/N;
